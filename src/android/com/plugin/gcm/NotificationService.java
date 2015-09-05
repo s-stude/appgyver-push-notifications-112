@@ -1,11 +1,24 @@
+// Decompiled by Jad v1.5.8e. Copyright 2001 Pavel Kouznetsov.
+// Jad home page: http://www.geocities.com/kpdus/jad.html
+// Decompiler options: braces fieldsfirst space lnc 
+
 package com.plugin.gcm;
 
 import android.app.NotificationManager;
-
+import android.content.Context;
+import android.os.Bundle;
+import android.util.Log;
+import com.appgyver.cordova.AGCordovaApplicationInterface;
 import com.google.android.gcm.GCMRegistrar;
-
-import com.appgyver.event.EventService;
-
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+import java.util.TimeZone;
+import java.util.UUID;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginResult;
@@ -13,582 +26,512 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import android.content.Context;
-import android.os.Bundle;
-import android.util.Log;
+public class NotificationService
+{
+    static class WebViewReference
+    {
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
-import java.util.TimeZone;
-import java.util.Date;
-import java.text.SimpleDateFormat;
-import java.text.DateFormat;
+        private CallbackContext mNotificationBackgroundCallBack;
+        private CallbackContext mNotificationForegroundCallBack;
+        private NotificationService mNotificationService;
+        private List mNotifications;
+        private boolean mNotifiedOfRegistered;
+        private CallbackContext mRegisterCallBack;
+        private CordovaWebView mWebView;
 
-/**
- * Notification Service - Handles Push Notification and deliver the messages to all web views
- * that have registered callbacks.
- */
-public class NotificationService {
+        private void sendNotification(CallbackContext callbackcontext, JSONObject jsonobject)
+        {
+            if (callbackcontext != null)
+            {
+                PluginResult pluginresult = new PluginResult(org.apache.cordova.PluginResult.Status.OK, jsonobject);
+                pluginresult.setKeepCallback(true);
+                callbackcontext.sendPluginResult(pluginresult);
+                mNotifications.add(jsonobject);
+                return;
+            } else
+            {
+                Log.v(NotificationService.TAG, (new StringBuilder()).append("No Notification callback - webview: ").append(getWebView()).toString());
+                return;
+            }
+        }
 
-    public static final String USER_ACTION = "userAction";
+        public void destroy()
+        {
+            mWebView = null;
+            mRegisterCallBack = null;
+            mNotificationForegroundCallBack = null;
+            mNotificationBackgroundCallBack = null;
+            mNotificationService = null;
+            mNotifications.clear();
+        }
 
-    private static String TAG = "PushPlugin-NotificationService";
+        public CallbackContext getNotificationBackgroundCallBack()
+        {
+            return mNotificationBackgroundCallBack;
+        }
 
-    public static final String REG_ID = "regID";
+        public CallbackContext getNotificationForegroundCallBack()
+        {
+            return mNotificationForegroundCallBack;
+        }
 
-    public static final String FOREGROUND = "foreground";
+        public CallbackContext getRegisterCallBack()
+        {
+            return mRegisterCallBack;
+        }
+
+        public CordovaWebView getWebView()
+        {
+            return mWebView;
+        }
+
+        public boolean hasNotification(JSONObject jsonobject)
+        {
+            return mNotifications.contains(jsonobject);
+        }
+
+        public boolean hasNotifiedOfRegistered()
+        {
+            return mNotifiedOfRegistered;
+        }
+
+        public void notifyRegistered()
+        {
+            if (hasNotifiedOfRegistered())
+            {
+                Log.v(NotificationService.TAG, (new StringBuilder()).append("notifyRegistered() - Webview already notified of registration. skipping callback. webview: ").append(getWebView()).toString());
+                return;
+            }
+            if (getRegisterCallBack() != null)
+            {
+                setNotifiedOfRegistered(true);
+                getRegisterCallBack().success(mNotificationService.mRegistrationID);
+                return;
+            } else
+            {
+                Log.v(NotificationService.TAG, (new StringBuilder()).append("No Register callback - webview: ").append(getWebView()).toString());
+                return;
+            }
+        }
+
+        public void sendNotification(JSONObject jsonobject)
+        {
+            boolean flag;
+            if (hasNotification(jsonobject))
+            {
+                return;
+            }
+            flag = true;
+            boolean flag1 = jsonobject.getBoolean("foreground");
+            flag = flag1;
+_L2:
+            if (flag)
+            {
+                Log.v(NotificationService.TAG, (new StringBuilder()).append("sendNotification() - foreground callback - webview: ").append(getWebView()).toString());
+                sendNotification(getNotificationForegroundCallBack(), jsonobject);
+                return;
+            } else
+            {
+                Log.v(NotificationService.TAG, (new StringBuilder()).append("sendNotification() - background callback - webview: ").append(getWebView()).toString());
+                sendNotification(getNotificationBackgroundCallBack(), jsonobject);
+                return;
+            }
+            JSONException jsonexception;
+            jsonexception;
+            if (true) goto _L2; else goto _L1
+_L1:
+        }
+
+        public void setNotificationBackgroundCallBack(CallbackContext callbackcontext)
+        {
+            Log.v(NotificationService.TAG, (new StringBuilder()).append("setNotificationBackgroundCallBack() - webview: ").append(getWebView()).toString());
+            mNotificationBackgroundCallBack = callbackcontext;
+        }
+
+        public void setNotificationForegroundCallBack(CallbackContext callbackcontext)
+        {
+            Log.v(NotificationService.TAG, (new StringBuilder()).append("setNotificationForegroundCallBack() - webview: ").append(getWebView()).toString());
+            mNotificationForegroundCallBack = callbackcontext;
+        }
+
+        public void setNotifiedOfRegistered(boolean flag)
+        {
+            mNotifiedOfRegistered = flag;
+        }
+
+        public void setRegisterCallBack(CallbackContext callbackcontext)
+        {
+            mRegisterCallBack = callbackcontext;
+        }
+
+        public String toString()
+        {
+            String s = "empty";
+            if (getWebView() != null)
+            {
+                s = getWebView().toString();
+            }
+            return (new StringBuilder()).append("WebViewReference -> ").append(s).toString();
+        }
+
+        public WebViewReference(NotificationService notificationservice, CordovaWebView cordovawebview)
+        {
+            mNotifiedOfRegistered = false;
+            mNotifications = new ArrayList();
+            mNotificationService = notificationservice;
+            mWebView = cordovawebview;
+        }
+    }
+
 
     public static final String COLDSTART = "coldstart";
-
-    public static final String FROM = "from";
-
     public static final String COLLAPSE_KEY = "collapse_key";
-
-    public static final String MESSAGE = "message";
-
-    public static final String MSGCNT = "msgcnt";
-
-    public static final String SOUNDNAME = "soundname";
-
-    public static final String JSON_START_PREFIX = "{";
-
+    public static final String FOREGROUND = "foreground";
+    public static final String FROM = "from";
     public static final String JSON_ARRAY_START_PREFIX = "[";
-
-    public static final String PAYLOAD = "payload";
-
-    public static final String TIMESTAMP = "timestamp";
-
+    public static final String JSON_START_PREFIX = "{";
     public static final String KEY_UUID = "uuid";
-
+    public static final String MESSAGE = "message";
+    public static final String MSGCNT = "msgcnt";
+    public static final String PAYLOAD = "payload";
+    public static final String SOUNDNAME = "soundname";
+    private static String TAG = "PushPlugin-NotificationService";
+    public static final String TIMESTAMP = "timestamp";
+    public static final String USER_ACTION = "userAction";
     private static NotificationService sInstance;
-
-    private boolean mIsActive = false;
-
     private final Context mContext;
-
+    private boolean mForeground;
+    private List mNotifications;
+    private String mRegistrationID;
     private String mSenderID;
+    private List mWebViewReferences;
 
-    private List<WebViewReference> mWebViewReferences = new ArrayList<WebViewReference>();
-
-    private String mRegistrationID = null;
-
-    private List<JSONObject> mNotifications = new ArrayList<JSONObject>();
-
-    private boolean mForeground = false;
-
-    public NotificationService(Context context) {
+    public NotificationService(Context context)
+    {
+        mWebViewReferences = new ArrayList();
+        mRegistrationID = null;
+        mNotifications = new ArrayList();
+        mForeground = false;
         mContext = context;
-
-        EventService.getInstance().addEventListener(EventService.STEROIDS_APPLICATION_STARTED,
-                new EventService.EventHandler() {
-                    @Override
-                    public void call(Object eventContext) {
-                        mIsActive = true;
-                    }
-                });
-
-        EventService.getInstance().addEventListener(EventService.STEROIDS_APPLICATION_ENDED,
-                new EventService.EventHandler() {
-                    @Override
-                    public void call(Object eventContext) {
-                        cleanUp();
-                        mIsActive = false;
-                    }
-                });
     }
 
-    public boolean isActive() {
-        return mIsActive;
+    private void addNotification(JSONObject jsonobject)
+    {
+        mNotifications.add(jsonobject);
     }
 
-    public static NotificationService getInstance(Context context) {
-        if (sInstance == null) {
+    private void cleanUp()
+    {
+        Log.v(TAG, "Cleaning up");
+        mWebViewReferences.clear();
+        mNotifications.clear();
+    }
+
+    private JSONObject createNotificationJSON(Bundle bundle)
+    {
+        JSONObject jsonobject;
+        JSONObject jsonobject1;
+        try
+        {
+            jsonobject = new JSONObject();
+            jsonobject1 = new JSONObject();
+            Iterator iterator = bundle.keySet().iterator();
+            do
+            {
+                if (!iterator.hasNext())
+                {
+                    break;
+                }
+                String s = (String)iterator.next();
+                if (!parseSystemData(s, jsonobject, bundle))
+                {
+                    parseLegacyProperty(s, jsonobject, bundle);
+                    parseJsonProperty(s, jsonobject, bundle, jsonobject1);
+                }
+            } while (true);
+        }
+        // Misplaced declaration of an exception variable
+        catch (Bundle bundle)
+        {
+            Log.e(TAG, "extrasToJSON: JSON exception");
+            return null;
+        }
+        jsonobject.put("payload", jsonobject1);
+        jsonobject.put("foreground", isForeground());
+        boolean flag;
+        if (!isApplicationRunning())
+        {
+            flag = true;
+        } else
+        {
+            flag = false;
+        }
+        jsonobject.put("coldstart", flag);
+        jsonobject.put("timestamp", getTimeStamp());
+        jsonobject.put("uuid", generateUUID());
+        return jsonobject;
+    }
+
+    private WebViewReference createWebViewReference(CordovaWebView cordovawebview)
+    {
+        cordovawebview = new WebViewReference(this, cordovawebview);
+        mWebViewReferences.add(cordovawebview);
+        return cordovawebview;
+    }
+
+    private WebViewReference findWebViewReference(CordovaWebView cordovawebview)
+    {
+        Object obj = null;
+        Iterator iterator = mWebViewReferences.iterator();
+        WebViewReference webviewreference;
+        do
+        {
+            webviewreference = obj;
+            if (!iterator.hasNext())
+            {
+                break;
+            }
+            webviewreference = (WebViewReference)iterator.next();
+        } while (webviewreference.getWebView() != cordovawebview);
+        return webviewreference;
+    }
+
+    private void flushNotificationToWebView(WebViewReference webviewreference)
+    {
+        Log.v(TAG, (new StringBuilder()).append("flushNotificationToWebView() - Notifications.size(): ").append(mNotifications.size()).append(" -> webViewReference: ").append(webviewreference).toString());
+        for (Iterator iterator = mNotifications.iterator(); iterator.hasNext(); webviewreference.sendNotification((JSONObject)iterator.next())) { }
+    }
+
+    private String generateUUID()
+    {
+        return UUID.randomUUID().toString();
+    }
+
+    public static NotificationService getInstance(Context context)
+    {
+        if (sInstance == null)
+        {
             sInstance = new NotificationService(context);
         }
         return sInstance;
     }
 
-    public void setSenderID(String senderID) {
-        if (senderID != null && senderID.trim().length() > 0) {
-            mSenderID = senderID;
+    private String getTimeStamp()
+    {
+        TimeZone timezone = TimeZone.getTimeZone("UTC");
+        SimpleDateFormat simpledateformat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
+        simpledateformat.setTimeZone(timezone);
+        return simpledateformat.format(new Date());
+    }
+
+    private WebViewReference getWebViewReference(CordovaWebView cordovawebview)
+    {
+        WebViewReference webviewreference1 = findWebViewReference(cordovawebview);
+        WebViewReference webviewreference = webviewreference1;
+        if (webviewreference1 == null)
+        {
+            webviewreference = createWebViewReference(cordovawebview);
         }
+        return webviewreference;
     }
 
-    public void addRegisterCallBack(CordovaWebView webView, CallbackContext callBack) {
-        WebViewReference webViewReference = getWebViewReference(webView);
-        webViewReference.setRegisterCallBack(callBack);
-
-        if (isRegistered()) {
-            webViewReference.notifyRegistered();
-        } else {
-            registerDevice();
-        }
-    }
-
-    public void addNotificationForegroundCallBack(CordovaWebView webView,
-                                                  CallbackContext callBack) {
-        WebViewReference webViewReference = getWebViewReference(webView);
-        webViewReference.setNotificationForegroundCallBack(callBack);
-
-        flushNotificationToWebView(webViewReference);
-    }
-
-    public void addNotificationBackgroundCallBack(CordovaWebView webView,
-                                                  CallbackContext callBack) {
-        WebViewReference webViewReference = getWebViewReference(webView);
-        webViewReference.setNotificationBackgroundCallBack(callBack);
-
-        flushNotificationToWebView(webViewReference);
-    }
-
-    public void removeWebView(CordovaWebView webView) {
-        WebViewReference webViewReference = findWebViewReference(webView);
-        if (webViewReference != null) {
-            mWebViewReferences.remove(webViewReference);
-            webViewReference.destroy();
-
-            Log.v(TAG, "removeWebView : " + webView + " - after remove -> mWebViewReferences: "
-                    + mWebViewReferences);
-        }
-    }
-
-    private WebViewReference findWebViewReference(CordovaWebView webView) {
-        WebViewReference webViewReference = null;
-        for (WebViewReference item : mWebViewReferences) {
-            if (item.getWebView() == webView) {
-                webViewReference = item;
-                break;
-            }
-        }
-        return webViewReference;
-    }
-
-    private WebViewReference getWebViewReference(CordovaWebView webView) {
-        WebViewReference webViewReference = findWebViewReference(webView);
-        if (webViewReference == null) {
-            webViewReference = createWebViewReference(webView);
-        }
-        return webViewReference;
-    }
-
-    public void registerWebView(CordovaWebView webView) {
-        getWebViewReference(webView);
-    }
-
-    private boolean isRegistered() {
+    private boolean isRegistered()
+    {
         return mRegistrationID != null;
     }
 
-    private WebViewReference createWebViewReference(CordovaWebView webView) {
-        WebViewReference webViewReference = new WebViewReference(this, webView);
-        mWebViewReferences.add(webViewReference);
-        return webViewReference;
+    private void notifyAllWebViews()
+    {
+        for (Iterator iterator = mWebViewReferences.iterator(); iterator.hasNext(); flushNotificationToWebView((WebViewReference)iterator.next())) { }
     }
 
-    private void registerDevice() {
-        if (mSenderID == null) {
-            throw new IllegalArgumentException(
-                    "sender ID is required in order to register this device for push notifications. You must specify the senderId in the ApplicationManifest or when calling the JavaScript API.");
+    private void notifyRegisteredToAllWebViews()
+    {
+        for (Iterator iterator = mWebViewReferences.iterator(); iterator.hasNext(); ((WebViewReference)iterator.next()).notifyRegistered()) { }
+    }
+
+    private void parseJsonProperty(String s, JSONObject jsonobject, Bundle bundle, JSONObject jsonobject1)
+        throws JSONException
+    {
+        if (!(bundle.get(s) instanceof String))
+        {
+            break MISSING_BLOCK_LABEL_41;
         }
-        GCMRegistrar.register(mContext, mSenderID);
-    }
-
-    public void onRegistered(String regId) {
-        mRegistrationID = regId;
-        notifyRegisteredToAllWebViews();
-    }
-
-    private void notifyRegisteredToAllWebViews() {
-        for (WebViewReference webViewReference : mWebViewReferences) {
-            webViewReference.notifyRegistered();
+        bundle = bundle.getString(s);
+        if (!bundle.startsWith("{"))
+        {
+            break MISSING_BLOCK_LABEL_52;
         }
-    }
-
-    public void onMessage(Bundle extras) {
-        onMessage(extras, false);
-    }
-
-    /**
-     * Deliver a notification message..
-     *
-     * @param extras
-     * @param userAction -    When this flag is true we try to remove a duplicate notification.
-     *                   This only happens when the IntentService delivers the notification
-     *                   and the PushHandlerActivity also delivers the same notification
-     *                   because the user tapped in the notification.
-     */
-    public void onMessage(Bundle extras, boolean userAction) {
-        JSONObject notification = createNotificationJSON(extras);
-
-        if (userAction) {
-            tryToRemoveDuplicate(notification);
-
-            try {
-                notification.put(USER_ACTION, true);
-            } catch (JSONException e) {
-                /*no op*/
+        jsonobject1.put(s, new JSONObject(bundle));
+_L1:
+        return;
+        jsonobject;
+        jsonobject1.put(s, bundle);
+        return;
+        if (bundle.startsWith("["))
+        {
+            try
+            {
+                jsonobject1.put(s, new JSONArray(bundle));
+                return;
             }
-        }
-
-        Log.v(TAG, "onMessage() -> isForeground: " + isForeground() + " notification: "
-                + notification);
-
-        addNotification(notification);
-
-        notifyAllWebViews();
-    }
-
-    private void tryToRemoveDuplicate(JSONObject notification) {
-        int idx = 0;
-        boolean found = false;
-        for (idx = 0; idx < mNotifications.size(); idx++) {
-            JSONObject item = mNotifications.get(idx);
-            if (isEqual(notification, item)) {
-                found = true;
-                break;
+            // Misplaced declaration of an exception variable
+            catch (JSONObject jsonobject)
+            {
+                jsonobject1.put(s, bundle);
             }
+            return;
         }
-        if (found) {
-            Log.v(TAG, "tryToRemoveDuplicate() Duplicate found.. and removed.");
-            mNotifications.remove(idx);
+        if (!jsonobject.has(s))
+        {
+            jsonobject1.put(s, bundle);
+            return;
         }
+          goto _L1
     }
 
-    private boolean isEqual(JSONObject from, JSONObject to) {
-        boolean isEqual = false;
-
-        if (from != null && to != null &&
-                from.length() == to.length()) {
-
-            try {
-                Iterator<String> keys = from.keys();
-                isEqual = true;
-                while (keys.hasNext() && isEqual) {
-                    String key = keys.next();
-
-                    if (from.get(key) == null && to.get(key) == null) {
-                        continue;
-                    }
-
-                    if (from.get(key) instanceof JSONObject) {
-                        isEqual = isEqual((JSONObject) from.get(key), (JSONObject) to.get(key));
-                    } else {
-                        isEqual = from.get(key).equals(to.get(key));
-                    }
-                }
-            } catch (Exception exp) {
-                /*no op*/
-            }
-        } else {
-            isEqual = false;
-        }
-
-        return isEqual;
-    }
-
-
-    private void notifyAllWebViews() {
-        for (WebViewReference webViewReference : mWebViewReferences) {
-            flushNotificationToWebView(webViewReference);
+    private void parseLegacyProperty(String s, JSONObject jsonobject, Bundle bundle)
+        throws JSONException
+    {
+        if (s.equals("message") || s.equals("msgcnt") || s.equals("soundname"))
+        {
+            jsonobject.put(s, bundle.get(s));
         }
     }
 
-    private void flushNotificationToWebView(WebViewReference webViewReference) {
-        Log.v(TAG, "flushNotificationToWebView() - Notifications.size(): " + mNotifications.size() + " -> webViewReference: " + webViewReference);
+    private boolean parseSystemData(String s, JSONObject jsonobject, Bundle bundle)
+        throws JSONException
+    {
+        boolean flag = false;
+        if (s.equals("from") || s.equals("collapse_key"))
+        {
+            jsonobject.put(s, bundle.get(s));
+            flag = true;
+        } else
+        if (s.equals("coldstart"))
+        {
+            jsonobject.put(s, bundle.getBoolean("coldstart"));
+            return true;
+        }
+        return flag;
+    }
 
-        for (JSONObject notification : mNotifications) {
-            webViewReference.sendNotification(notification);
+    private void registerDevice()
+    {
+        if (mSenderID == null)
+        {
+            throw new IllegalArgumentException("sender ID is required in order to register this device for push notifications. You must specify the senderId in the ApplicationManifest or when calling the JavaScript API.");
+        } else
+        {
+            GCMRegistrar.register(mContext, new String[] {
+                mSenderID
+            });
+            return;
         }
     }
 
-    private void addNotification(JSONObject notification) {
-        mNotifications.add(notification);
+    public void addNotificationBackgroundCallBack(CordovaWebView cordovawebview, CallbackContext callbackcontext)
+    {
+        cordovawebview = getWebViewReference(cordovawebview);
+        cordovawebview.setNotificationBackgroundCallBack(callbackcontext);
+        flushNotificationToWebView(cordovawebview);
     }
 
-    private JSONObject createNotificationJSON(Bundle extras) {
-        try {
-
-            JSONObject notification = new JSONObject();
-            JSONObject payload = new JSONObject();
-
-            Iterator<String> it = extras.keySet().iterator();
-            while (it.hasNext()) {
-                String key = it.next();
-
-                if (parseSystemData(key, notification, extras)) {
-                    continue;
-                }
-
-                parseLegacyProperty(key, notification, extras);
-
-                parseJsonProperty(key, notification, extras, payload);
-            }
-
-            notification.put(PAYLOAD, payload);
-
-            notification.put(FOREGROUND, isForeground());
-
-            notification.put(TIMESTAMP, getTimeStamp());
-
-            notification.put(KEY_UUID, generateUUID());
-
-            return notification;
-
-        } catch (JSONException e) {
-            Log.e(TAG, "extrasToJSON: JSON exception");
-        }
-        return null;
+    public void addNotificationForegroundCallBack(CordovaWebView cordovawebview, CallbackContext callbackcontext)
+    {
+        cordovawebview = getWebViewReference(cordovawebview);
+        cordovawebview.setNotificationForegroundCallBack(callbackcontext);
+        flushNotificationToWebView(cordovawebview);
     }
 
-    private String generateUUID() {
-        UUID uuid = UUID.randomUUID();
-
-        return uuid.toString();
-    }
-
-    private String getTimeStamp() {
-        TimeZone tz = TimeZone.getTimeZone("UTC");
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
-
-        df.setTimeZone(tz);
-        String timeAsISO = df.format(new Date());
-
-        return timeAsISO;
-    }
-
-    // Try to figure out if the value is another JSON object or JSON Array
-    private void parseJsonProperty(String key, JSONObject json, Bundle extras,
-                                   JSONObject jsondata) throws JSONException {
-
-        if (extras.get(key) instanceof String) {
-            String strValue = extras.getString(key);
-
-            if (strValue.startsWith(JSON_START_PREFIX)) {
-                try {
-                    JSONObject jsonObj = new JSONObject(strValue);
-                    jsondata.put(key, jsonObj);
-                } catch (Exception e) {
-                    jsondata.put(key, strValue);
-                }
-
-            } else if (strValue.startsWith(JSON_ARRAY_START_PREFIX)) {
-                try {
-                    JSONArray jsonArray = new JSONArray(strValue);
-                    jsondata.put(key, jsonArray);
-                } catch (Exception e) {
-                    jsondata.put(key, strValue);
-                }
-            } else {
-                if (!json.has(key)) {
-                    jsondata.put(key, strValue);
-                }
-            }
+    public void addRegisterCallBack(CordovaWebView cordovawebview, CallbackContext callbackcontext)
+    {
+        cordovawebview = getWebViewReference(cordovawebview);
+        cordovawebview.setRegisterCallBack(callbackcontext);
+        if (isRegistered())
+        {
+            cordovawebview.notifyRegistered();
+            return;
+        } else
+        {
+            registerDevice();
+            return;
         }
     }
 
-    // Maintain backwards compatibility
-    private void parseLegacyProperty(String key, JSONObject json, Bundle extras)
-            throws JSONException {
-        if (key.equals(MESSAGE) || key.equals(MSGCNT) || key.equals(SOUNDNAME)) {
-            json.put(key, extras.get(key));
-        }
+    public boolean isApplicationRunning()
+    {
+        return ((AGCordovaApplicationInterface)mContext.getApplicationContext()).isRunning();
     }
 
-    private boolean parseSystemData(String key, JSONObject json, Bundle extras)
-            throws JSONException {
-
-        boolean found = false;
-
-        if (key.equals(FROM) || key.equals(COLLAPSE_KEY)) {
-            json.put(key, extras.get(key));
-            found = true;
-        } else if (key.equals(COLDSTART)) {
-            json.put(key, extras.getBoolean(COLDSTART));
-            found = true;
-        }
-
-        return found;
-    }
-
-    public void setForeground(boolean foreground) {
-        if (mForeground != foreground) {
-            Log.v(TAG, "setForeground() -> oldValue: " + mForeground + " newValue: " + foreground);
-
-            if (!foreground) {
-
-                final NotificationManager notificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
-                notificationManager.cancelAll();
-
-            }
-        }
-        mForeground = foreground;
-
-    }
-
-    public boolean isForeground() {
+    public boolean isForeground()
+    {
         return mForeground;
     }
 
-    public void onDestroy() {
+    public void onDestroy()
+    {
         GCMRegistrar.onDestroy(mContext);
         cleanUp();
         sInstance = null;
     }
 
-    public void unRegister() {
+    public void onMessage(Bundle bundle)
+    {
+        bundle = createNotificationJSON(bundle);
+        Log.v(TAG, (new StringBuilder()).append("onMessage() -> isForeground: ").append(isForeground()).append(" isApplicationRunning ").append(isApplicationRunning()).append(" notification: ").append(bundle).toString());
+        addNotification(bundle);
+        notifyAllWebViews();
+    }
+
+    public void onRegistered(String s)
+    {
+        mRegistrationID = s;
+        notifyRegisteredToAllWebViews();
+    }
+
+    public void registerWebView(CordovaWebView cordovawebview)
+    {
+        getWebViewReference(cordovawebview);
+    }
+
+    public void removeWebView(CordovaWebView cordovawebview)
+    {
+        WebViewReference webviewreference = findWebViewReference(cordovawebview);
+        if (webviewreference != null)
+        {
+            mWebViewReferences.remove(webviewreference);
+            webviewreference.destroy();
+            Log.v(TAG, (new StringBuilder()).append("removeWebView : ").append(cordovawebview).append(" - after remove -> mWebViewReferences: ").append(mWebViewReferences).toString());
+        }
+    }
+
+    public void setForeground(boolean flag)
+    {
+        if (mForeground != flag)
+        {
+            Log.v(TAG, (new StringBuilder()).append("setForeground() -> oldValue: ").append(mForeground).append(" newValue: ").append(flag).toString());
+            ((NotificationManager)mContext.getSystemService("notification")).cancelAll();
+        }
+        mForeground = flag;
+    }
+
+    public void setSenderID(String s)
+    {
+        if (s != null && s.trim().length() > 0)
+        {
+            mSenderID = s;
+        }
+    }
+
+    public void unRegister()
+    {
         Log.v(TAG, "unRegister");
         GCMRegistrar.unregister(mContext);
         mRegistrationID = null;
         cleanUp();
     }
 
-    private void cleanUp() {
-        Log.v(TAG, "Cleaning up");
-
-        mWebViewReferences.clear();
-        mNotifications.clear();
-    }
 
 
-    static class WebViewReference {
-
-        private CordovaWebView mWebView;
-
-        private CallbackContext mRegisterCallBack;
-
-        private CallbackContext mNotificationForegroundCallBack;
-
-        private CallbackContext mNotificationBackgroundCallBack;
-
-        private NotificationService mNotificationService;
-
-        private boolean mNotifiedOfRegistered = false;
-
-        private List<JSONObject> mNotifications = new ArrayList<JSONObject>();
-
-        public WebViewReference(NotificationService notificationService, CordovaWebView webView) {
-            mNotificationService = notificationService;
-            mWebView = webView;
-        }
-
-        public void destroy() {
-            mWebView = null;
-            mRegisterCallBack = null;
-            mNotificationForegroundCallBack = null;
-            mNotificationBackgroundCallBack = null;
-            mNotificationService = null;
-
-            mNotifications.clear();
-        }
-
-        public boolean hasNotifiedOfRegistered() {
-            return mNotifiedOfRegistered;
-        }
-
-        public void setNotifiedOfRegistered(boolean notifiedOfRegistered) {
-            mNotifiedOfRegistered = notifiedOfRegistered;
-        }
-
-        public CordovaWebView getWebView() {
-            return mWebView;
-        }
-
-        public boolean hasNotification(JSONObject notification) {
-            return mNotifications.contains(notification);
-        }
-
-        public void notifyRegistered() {
-            if (hasNotifiedOfRegistered()) {
-                Log.v(TAG,
-                        "notifyRegistered() - Webview already notified of registration. skipping callback. webview: "
-                                + getWebView());
-                return;
-            }
-
-            if (getRegisterCallBack() != null) {
-                setNotifiedOfRegistered(true);
-                getRegisterCallBack().success(mNotificationService.mRegistrationID);
-            } else {
-                Log.v(TAG, "No Register callback - webview: " + getWebView());
-            }
-        }
-
-        public void sendNotification(JSONObject notification) {
-            if (hasNotification(notification)) {
-                //Log.v(TAG,
-                //        "sendNotification() - Webview already received this notification. skipping callback. webview: "
-                //                + getWebView());
-                return;
-            }
-
-            boolean isForeground = true;
-            try {
-                isForeground = notification.getBoolean(FOREGROUND);
-            } catch (JSONException e) {
-                /*no op*/
-            }
-
-            if (isForeground) {
-                Log.v(TAG, "sendNotification() - foreground callback - webview: " + getWebView());
-                sendNotification(getNotificationForegroundCallBack(), notification);
-            } else {
-                Log.v(TAG, "sendNotification() - background callback - webview: " + getWebView());
-                sendNotification(getNotificationBackgroundCallBack(), notification);
-            }
-        }
-
-        private void sendNotification(CallbackContext callBack,
-                                      JSONObject notification) {
-
-            if (callBack != null) {
-
-                PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, notification);
-                pluginResult.setKeepCallback(true);
-
-                callBack.sendPluginResult(pluginResult);
-
-                mNotifications.add(notification);
-            } else {
-                Log.v(TAG, "No Notification callback - webview: " + getWebView());
-            }
-        }
-
-        public void setNotificationForegroundCallBack(CallbackContext callBack) {
-            Log.v(TAG, "setNotificationForegroundCallBack() - webview: " + getWebView());
-            mNotificationForegroundCallBack = callBack;
-        }
-
-        public void setNotificationBackgroundCallBack(CallbackContext callBack) {
-            Log.v(TAG, "setNotificationBackgroundCallBack() - webview: " + getWebView());
-            mNotificationBackgroundCallBack = callBack;
-        }
-
-        public CallbackContext getNotificationForegroundCallBack() {
-            return mNotificationForegroundCallBack;
-        }
-
-        public CallbackContext getNotificationBackgroundCallBack() {
-            return mNotificationBackgroundCallBack;
-        }
-
-        public void setRegisterCallBack(CallbackContext callBack) {
-            mRegisterCallBack = callBack;
-        }
-
-        public CallbackContext getRegisterCallBack() {
-            return mRegisterCallBack;
-        }
-
-        @Override
-        public String toString() {
-            String webViewStr = "empty";
-            if (getWebView() != null) {
-                webViewStr = getWebView().toString();
-            }
-            return "WebViewReference -> " + webViewStr;
-        }
-
-    }
 }

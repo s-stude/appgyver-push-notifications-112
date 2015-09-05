@@ -1,5 +1,14 @@
+// Decompiled by Jad v1.5.8e. Copyright 2001 Pavel Kouznetsov.
+// Jad home page: http://www.geocities.com/kpdus/jad.html
+// Decompiler options: braces fieldsfirst space lnc 
+
 package com.plugin.gcm;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.util.Log;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
@@ -7,184 +16,138 @@ import org.apache.cordova.CordovaWebView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import android.content.Context;
-import android.os.Bundle;
-import android.util.Log;
+// Referenced classes of package com.plugin.gcm:
+//            NotificationService
 
-/**
-* Push Notifications Plugin
-*/
-public class PushPlugin extends CordovaPlugin {
+public class PushPlugin extends CordovaPlugin
+{
 
-  public static final String TAG = "PushPlugin";
+    public static final String EXIT = "exit";
+    public static final String GCM_SENDER_ID = "gcm_senderid";
+    public static final String ON_MESSAGE_BACKGROUND = "onMessageInBackground";
+    public static final String ON_MESSAGE_FOREGROUND = "onMessageInForeground";
+    public static final String REGISTER = "register";
+    public static final String SENDER_ID = "senderID";
+    public static final String TAG = "PushPlugin";
+    public static final String UNREGISTER = "unregister";
 
-  public static final String REGISTER = "register";
-
-  public static final String UNREGISTER = "unregister";
-
-  public static final String EXIT = "exit";
-
-  public static final String ON_MESSAGE_FOREGROUND = "onMessageInForeground";
-
-  public static final String ON_MESSAGE_BACKGROUND = "onMessageInBackground";
-
-  public static final String SENDER_ID = "senderID";
-
-  public static final String GCM_SENDER_ID = "gcm_senderid";
-
-  public void initialize(CordovaInterface cordova, CordovaWebView webView) {
-    super.initialize(cordova, webView);
-
-    readSenderIdFromCordovaConfig();
-  }
-
-  private void readSenderIdFromCordovaConfig() {
-    Bundle extras = cordova.getActivity().getIntent().getExtras();
-    if(extras.containsKey(GCM_SENDER_ID)) {
-      String senderID = extras.getString(GCM_SENDER_ID);
-      NotificationService
-      .getInstance(getApplicationContext())
-      .setSenderID(senderID);
-    }
-  }
-
-  /**
-  * Gets the application context from cordova's main activity.
-  *
-  * @return the application context
-  */
-  private Context getApplicationContext() {
-    return this.cordova.getActivity().getApplicationContext();
-  }
-
-  private boolean handleRegister(JSONArray data, CallbackContext callbackContext) {
-    try {
-      JSONObject jo = data.getJSONObject(0);
-
-      String senderID = (String) jo.get(SENDER_ID);
-
-      if(senderID != null && senderID.trim().length() > 0) {
-        NotificationService
-        .getInstance(getApplicationContext())
-        .setSenderID(senderID);
-      }
-
-      NotificationService
-      .getInstance(getApplicationContext())
-      .registerWebView(this.webView);
-
-      NotificationService
-      .getInstance(getApplicationContext())
-      .addRegisterCallBack(this.webView, callbackContext);
-
-      return true;
-
-    }
-    catch (Exception e) {
-      Log.e(TAG, "execute: Got JSON Exception " + e.getMessage());
-      callbackContext.error(e.getMessage());
-      return false;
-    }
-  }
-
-  @Override
-  public boolean execute(String action, JSONArray data, CallbackContext callbackContext) {
-
-    Log.v(TAG, "handleRegister -> data: " + data);
-
-    boolean result = false;
-
-    if (REGISTER.equals(action)) {
-
-      result = handleRegister(data, callbackContext);
-
-    }
-    else if (ON_MESSAGE_FOREGROUND.equals(action)) {
-
-      result = handleOnMessageForeground(data, callbackContext);
-
-    }
-    else if (ON_MESSAGE_BACKGROUND.equals(action)) {
-
-      result = handleOnMessageBackground(data, callbackContext);
-
-    }
-    else if (UNREGISTER.equals(action)) {
-
-      result = handleUnRegister(data, callbackContext);
-
-    }
-    else {
-      result = false;
-      Log.e(TAG, "Invalid action : " + action);
-      callbackContext.error("Invalid action : " + action);
+    public PushPlugin()
+    {
     }
 
-    return result;
-  }
+    private Context getApplicationContext()
+    {
+        return cordova.getActivity().getApplicationContext();
+    }
 
-  private boolean handleUnRegister(JSONArray data, CallbackContext callbackContext) {
-    Log.v(TAG, "handleUnRegister() -> data: " + data);
+    private boolean handleOnMessageBackground(JSONArray jsonarray, CallbackContext callbackcontext)
+    {
+        Log.v("PushPlugin", (new StringBuilder()).append("handleOnMessageBackground() -> data: ").append(jsonarray).toString());
+        NotificationService.getInstance(getApplicationContext()).addNotificationBackgroundCallBack(webView, callbackcontext);
+        return true;
+    }
 
-    NotificationService
-    .getInstance(getApplicationContext())
-    .unRegister();
+    private boolean handleOnMessageForeground(JSONArray jsonarray, CallbackContext callbackcontext)
+    {
+        Log.v("PushPlugin", (new StringBuilder()).append("handleOnMessageForeground() -> data: ").append(jsonarray).toString());
+        NotificationService.getInstance(getApplicationContext()).addNotificationForegroundCallBack(webView, callbackcontext);
+        return true;
+    }
 
-    callbackContext.success();
-    return true;
-  }
+    private boolean handleRegister(JSONArray jsonarray, CallbackContext callbackcontext)
+    {
+        try
+        {
+            jsonarray = (String)jsonarray.getJSONObject(0).get("senderID");
+        }
+        // Misplaced declaration of an exception variable
+        catch (JSONArray jsonarray)
+        {
+            Log.e("PushPlugin", (new StringBuilder()).append("execute: Got JSON Exception ").append(jsonarray.getMessage()).toString());
+            callbackcontext.error(jsonarray.getMessage());
+            return false;
+        }
+        if (jsonarray == null)
+        {
+            break MISSING_BLOCK_LABEL_39;
+        }
+        if (jsonarray.trim().length() > 0)
+        {
+            NotificationService.getInstance(getApplicationContext()).setSenderID(jsonarray);
+        }
+        NotificationService.getInstance(getApplicationContext()).registerWebView(webView);
+        NotificationService.getInstance(getApplicationContext()).addRegisterCallBack(webView, callbackcontext);
+        return true;
+    }
 
-  private boolean handleOnMessageForeground(JSONArray data, CallbackContext callbackContext) {
-    Log.v(TAG, "handleOnMessageForeground() -> data: " + data);
+    private boolean handleUnRegister(JSONArray jsonarray, CallbackContext callbackcontext)
+    {
+        Log.v("PushPlugin", (new StringBuilder()).append("handleUnRegister() -> data: ").append(jsonarray).toString());
+        NotificationService.getInstance(getApplicationContext()).unRegister();
+        callbackcontext.success();
+        return true;
+    }
 
-    NotificationService
-    .getInstance(getApplicationContext())
-    .addNotificationForegroundCallBack(this.webView, callbackContext);
+    private void readSenderIdFromCordovaConfig()
+    {
+        Object obj = cordova.getActivity().getIntent().getExtras();
+        if (((Bundle) (obj)).containsKey("gcm_senderid"))
+        {
+            obj = ((Bundle) (obj)).getString("gcm_senderid");
+            NotificationService.getInstance(getApplicationContext()).setSenderID(((String) (obj)));
+        }
+    }
 
-    return true;
-  }
+    public boolean execute(String s, JSONArray jsonarray, CallbackContext callbackcontext)
+    {
+        Log.v("PushPlugin", (new StringBuilder()).append("handleRegister -> data: ").append(jsonarray).toString());
+        if ("register".equals(s))
+        {
+            return handleRegister(jsonarray, callbackcontext);
+        }
+        if ("onMessageInForeground".equals(s))
+        {
+            return handleOnMessageForeground(jsonarray, callbackcontext);
+        }
+        if ("onMessageInBackground".equals(s))
+        {
+            return handleOnMessageBackground(jsonarray, callbackcontext);
+        }
+        if ("unregister".equals(s))
+        {
+            return handleUnRegister(jsonarray, callbackcontext);
+        } else
+        {
+            Log.e("PushPlugin", (new StringBuilder()).append("Invalid action : ").append(s).toString());
+            callbackcontext.error((new StringBuilder()).append("Invalid action : ").append(s).toString());
+            return false;
+        }
+    }
 
-  private boolean handleOnMessageBackground(JSONArray data, CallbackContext callbackContext) {
-    Log.v(TAG, "handleOnMessageBackground() -> data: " + data);
+    public void initialize(CordovaInterface cordovainterface, CordovaWebView cordovawebview)
+    {
+        super.initialize(cordovainterface, cordovawebview);
+        readSenderIdFromCordovaConfig();
+    }
 
-    NotificationService
-    .getInstance(getApplicationContext())
-    .addNotificationBackgroundCallBack(this.webView, callbackContext);
+    public void onDestroy()
+    {
+        Log.v("PushPlugin", (new StringBuilder()).append("onDestroy() -> webView: ").append(webView).toString());
+        NotificationService.getInstance(getApplicationContext()).removeWebView(webView);
+        super.onDestroy();
+    }
 
-    return true;
-  }
+    public void onPause(boolean flag)
+    {
+        super.onPause(flag);
+        Log.v("PushPlugin", (new StringBuilder()).append("onPause() -> webView: ").append(webView).toString());
+        NotificationService.getInstance(getApplicationContext()).setForeground(false);
+    }
 
-  @Override
-  public void onPause(boolean multitasking) {
-    super.onPause(multitasking);
-
-    Log.v(TAG, "onPause() -> webView: " + webView);
-
-    NotificationService
-    .getInstance(getApplicationContext())
-    .setForeground(false);
-  }
-
-  @Override
-  public void onResume(boolean multitasking) {
-    super.onResume(multitasking);
-
-    Log.v(TAG, "onResume() -> webView: " + webView);
-
-    NotificationService
-    .getInstance(getApplicationContext())
-    .setForeground(true);
-  }
-
-
-  public void onDestroy() {
-
-    Log.v(TAG, "onDestroy() -> webView: " + webView);
-
-    NotificationService
-    .getInstance(getApplicationContext())
-    .removeWebView(this.webView);
-
-    super.onDestroy();
-  }
+    public void onResume(boolean flag)
+    {
+        super.onResume(flag);
+        Log.v("PushPlugin", (new StringBuilder()).append("onResume() -> webView: ").append(webView).toString());
+        NotificationService.getInstance(getApplicationContext()).setForeground(true);
+    }
 }

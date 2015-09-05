@@ -1,19 +1,21 @@
+// Decompiled by Jad v1.5.8e. Copyright 2001 Pavel Kouznetsov.
+// Jad home page: http://www.geocities.com/kpdus/jad.html
+// Decompiler options: braces fieldsfirst space lnc 
+
 package com.plugin.gcm;
 
 import android.content.Context;
-
 import com.google.android.gcm.GCMBroadcastReceiver;
-import static com.google.android.gcm.GCMConstants.DEFAULT_INTENT_SERVICE_CLASS_NAME;
 
-/*
- * Implementation of GCMBroadcastReceiver that hard-wires the intent service to be 
- * com.plugin.gcm.GCMIntentService, instead of your_package.GCMIntentService 
- */
-public class CordovaGCMBroadcastReceiver extends GCMBroadcastReceiver {
-	
-	@Override
-	protected String getGCMIntentServiceClassName(Context context) {
-    	return "com.plugin.gcm" + DEFAULT_INTENT_SERVICE_CLASS_NAME;
+public class CordovaGCMBroadcastReceiver extends GCMBroadcastReceiver
+{
+
+    public CordovaGCMBroadcastReceiver()
+    {
     }
-	
+
+    protected String getGCMIntentServiceClassName(Context context)
+    {
+        return "com.plugin.gcm.GCMIntentService";
+    }
 }
